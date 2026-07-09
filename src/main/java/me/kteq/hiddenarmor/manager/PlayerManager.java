@@ -13,7 +13,6 @@ import org.bukkit.entity.Player;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
@@ -30,8 +29,6 @@ public class PlayerManager implements ConfigHolder {
     private boolean invisibleAlwaysHideGear;
 
     private Set<UUID> enabledPlayersUUID = new HashSet<>();
-    private final Set<Predicate<Player>> forceDisablePredicates = new HashSet<>();
-    private final Set<Predicate<Player>> forceEnablePredicates = new HashSet<>();
 
 
     public PlayerManager(HiddenArmor plugin) {
@@ -39,7 +36,6 @@ public class PlayerManager implements ConfigHolder {
         plugin.addConfigHolder(this);
         this.armorUpdater = plugin.getArmorUpdater();
         this.messageHandler = plugin.getMessageHandler();
-        registerDefaultPredicates();
         loadEnabledPlayers();
     }
 
@@ -57,6 +53,11 @@ public class PlayerManager implements ConfigHolder {
             Map<String, String> placeholderMap = new HashMap<>();
             placeholderMap.put("visibility", "%visibility-hidden%");
             messageHandler.message(ChatMessageType.ACTION_BAR, player, "%armor-visibility%", false, placeholderMap);
+
+            // Creative players never get their armor hidden (see isArmorVisible), so reporting
+            // "Hidden" and nothing else reads as the plugin being broken.
+            if (player.getGameMode().equals(GameMode.CREATIVE))
+                messageHandler.message(player, "%creative-mode-warning%");
         }
 
         this.enabledPlayersUUID.add(player.getUniqueId());
@@ -79,28 +80,23 @@ public class PlayerManager implements ConfigHolder {
         return this.enabledPlayersUUID.contains(player.getUniqueId());
     }
 
-    public boolean isArmorVisible(Player player) {
-        boolean hidden = isEnabled(player);
-        for (Predicate<Player> predicate : forceDisablePredicates) {
-            if (predicate.test(player)) {
-                hidden = false;
-                break;
-            }
-        }
-        for (Predicate<Player> predicate : forceEnablePredicates) {
-            if (predicate.test(player)) {
-                hidden = true;
-                break;
-            }
-        }
-        return !hidden;
+    /// @return **false** when no player on the server can possibly be hiding armor.
+    /// Lets the packet listeners skip their work entirely, which matters because
+    /// they run on every equipment and inventory packet the server sends.
+    public boolean isAnyoneHiding() {
+        return !enabledPlayersUUID.isEmpty() || invisibleAlwaysHideGear;
     }
 
-    private void registerDefaultPredicates() {
-        forceDisablePredicates.add(player -> player.getGameMode().equals(GameMode.CREATIVE));
-        forceDisablePredicates.add(player -> player.isInvisible() && !invisibleAlwaysHideGear);
+    public boolean isArmorVisible(Player player) {
+        boolean hidden = isEnabled(player);
+        boolean invisible = player.isInvisible();
 
-        forceEnablePredicates.add(player -> player.isInvisible() && invisibleAlwaysHideGear);
+        if (player.getGameMode().equals(GameMode.CREATIVE) || (invisible && !invisibleAlwaysHideGear))
+            hidden = false;
+        if (invisible && invisibleAlwaysHideGear)
+            hidden = true;
+
+        return !hidden;
     }
 
     public void saveCurrentEnabledPlayers() {

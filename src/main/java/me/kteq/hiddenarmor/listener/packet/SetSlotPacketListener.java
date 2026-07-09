@@ -49,7 +49,7 @@ public class SetSlotPacketListener extends PacketAdapter {
         ItemStack itemStack = packet.getItemModifier().read(ITEM_INDEX);
         if (itemStack != null) {
             ItemStack placeholder = placeholderHandler.buildItemPlaceholder(itemStack);
-            packet.getItemModifier().write(0, placeholder);
+            packet.getItemModifier().write(ITEM_INDEX, placeholder);
         }
     }
 

@@ -5,7 +5,6 @@ import me.kteq.hiddenarmor.HiddenArmor;
 import me.kteq.hiddenarmor.util.ConfigHolder;
 import me.kteq.hiddenarmor.util.ItemUtil;
 import me.kteq.hiddenarmor.util.StrUtil;
-import org.apache.commons.lang.WordUtils;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
@@ -80,6 +79,11 @@ public class ArmorPlaceholderHandler implements ConfigHolder {
         if(!ItemUtil.isArmor(armor)) return null;
 
         String m = armor.getType().toString();
+        if(m.startsWith("LEATHER_") && ignoreLeatherArmor)
+            return null;
+        if(m.startsWith("TURTLE_") && ignoreTurtleHelmet)
+            return null;
+
         if(m.startsWith("NETHERITE_"))
             return Material.POLISHED_BLACKSTONE_BUTTON;
         if(m.startsWith("DIAMOND_"))
@@ -88,13 +92,17 @@ public class ArmorPlaceholderHandler implements ConfigHolder {
             return Material.BIRCH_BUTTON;
         if(m.startsWith("IRON_"))
             return Material.STONE_BUTTON;
-        if(m.startsWith("LEATHER_") && !ignoreLeatherArmor)
+        if(m.startsWith("LEATHER_"))
             return Material.ACACIA_BUTTON;
         if(m.startsWith("CHAINMAIL_"))
             return Material.JUNGLE_BUTTON;
-        if(m.startsWith("TURTLE_") && !ignoreTurtleHelmet)
+        if(m.startsWith("TURTLE_"))
             return Material.CRIMSON_BUTTON;
-        return null;
+        if(m.startsWith("COPPER_"))
+            return Material.MANGROVE_BUTTON;
+        // An armor tier with no colour of its own must still be hidden. Returning null here
+        // is what left copper armor fully visible when 26.x added it.
+        return Material.STONE_BUTTON;
     }
 
     private String buildDurabilityText(ItemStack itemStack){
@@ -110,12 +118,12 @@ public class ArmorPlaceholderHandler implements ConfigHolder {
 
     private String buildName(ItemStack itemStack){
         String name = itemStack.getType().toString();
-        name = name.replaceAll("_", " ");
-        name = WordUtils.capitalizeFully(name);
+        name = name.replace('_', ' ');
+        name = StrUtil.capitalizeFully(name);
 
         ItemMeta itemMeta = itemStack.getItemMeta();
         if(itemMeta != null && itemMeta.hasDisplayName())
-            name = itemStack.getItemMeta().getDisplayName() + StrUtil.color(" &r&8(") + name + ")";
+            name = itemMeta.getDisplayName() + StrUtil.color(" &r&8(") + name + ")";
         else
             name = StrUtil.color("&r") + name;
         return name;
