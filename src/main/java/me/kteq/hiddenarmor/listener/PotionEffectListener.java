@@ -8,6 +8,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityPotionEffectEvent;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
 public class PotionEffectListener implements Listener {
@@ -26,6 +27,9 @@ public class PotionEffectListener implements Listener {
     @EventHandler
     public void onPlayerInvisibleEffect(EntityPotionEffectEvent event) {
         if (!(event.getEntity() instanceof Player)) return;
+        // Only invisibility changes what armor is shown. Without this, every beacon tick and
+        // every potion on every player rebroadcast that player's equipment to everyone nearby.
+        if (!PotionEffectType.INVISIBILITY.equals(event.getModifiedType())) return;
         Player player = (Player) event.getEntity();
 
         new BukkitRunnable(){

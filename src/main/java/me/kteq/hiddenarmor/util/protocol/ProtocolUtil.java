@@ -2,9 +2,6 @@ package me.kteq.hiddenarmor.util.protocol;
 
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.wrappers.EnumWrappers;
-import com.comphenix.protocol.wrappers.Pair;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -12,18 +9,13 @@ import org.bukkit.inventory.PlayerInventory;
 
 public class ProtocolUtil {
 
+    /// Sends the packet to exactly the players the server is tracking this player for.
+    /// This is the same set the server itself broadcasts entity updates to, so it respects
+    /// per-player view distance instead of guessing with a world-wide distance scan.
     public static void broadcastPlayerPacket(ProtocolManager manager, PacketContainer packet, Player player) {
-        for(Player p : Bukkit.getOnlinePlayers()){
-            if(!(p.getWorld().equals(player.getWorld()) && p.getLocation().distance(player.getLocation()) < Bukkit.getViewDistance()*16 && !p.equals(player))) continue;
-            manager.sendServerPacket(p, packet);
+        for(Player viewer : player.getTrackedBy()){
+            manager.sendServerPacket(viewer, packet);
         }
-    }
-
-    public static boolean isArmorSlot(Pair<EnumWrappers.ItemSlot, ItemStack> pair) {
-        return pair.getFirst().equals(EnumWrappers.ItemSlot.FEET) ||
-                pair.getFirst().equals(EnumWrappers.ItemSlot.LEGS) ||
-                pair.getFirst().equals(EnumWrappers.ItemSlot.CHEST) ||
-                pair.getFirst().equals(EnumWrappers.ItemSlot.HEAD);
     }
 
     public enum ArmorType {
@@ -32,10 +24,13 @@ public class ProtocolUtil {
         private final int value;
 
         public static ArmorType getType(int value){
-            for(int i = 0; i < values().length; i++){
-                if(values()[i].getValue() == value) return values()[i];
+            switch (value) {
+                case 5: return HELMET;
+                case 6: return CHEST;
+                case 7: return LEGGS;
+                case 8: return BOOTS;
+                default: return null;
             }
-            return null;
         }
 
         public int getValue(){
@@ -47,6 +42,9 @@ public class ProtocolUtil {
         }
     }
 
+    /// @return A **copy** of the armor piece in that slot, or AIR. The copy matters: the packet
+    /// listeners rewrite the ItemStack they are handed, and a Bukkit ItemStack read straight out
+    /// of a live inventory mirrors the server's real item.
     public static ItemStack getArmor(ArmorType type, PlayerInventory inv) {
         switch (type) {
             case HELMET: if(inv.getHelmet()!=null) return inv.getHelmet().clone();

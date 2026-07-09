@@ -17,7 +17,7 @@ import me.kteq.hiddenarmor.util.ItemUtil;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -41,18 +41,22 @@ public class EntityEquipmentPacketListener extends PacketAdapter implements Conf
         this.hiddenArmorManager = plugin.getPlayerManager();
         this.protocolManager = plugin.getProtocolManager();
 
-        this.ENTITY_ID_INDEX = indexMapper.get(PacketFields.ENTITY_EQUIPMENT_$SLOT_ITEM_PAIR_LIST);
-        this.SLOT_ITEM_PAIR_LIST_INDEX = indexMapper.get(PacketFields.ENTITY_EQUIPMENT_$ENTITY_ID);
+        this.ENTITY_ID_INDEX = indexMapper.get(PacketFields.ENTITY_EQUIPMENT_$ENTITY_ID);
+        this.SLOT_ITEM_PAIR_LIST_INDEX = indexMapper.get(PacketFields.ENTITY_EQUIPMENT_$SLOT_ITEM_PAIR_LIST);
     }
 
     @Override
     public void onPacketSending(PacketEvent event) {
+        // Every equipment packet of every mob passes through here. Bail before the entity
+        // lookup when nobody on the server is hiding anything.
+        if(!hiddenArmorManager.isAnyoneHiding()) return;
+
         PacketContainer packet = event.getPacket();
         Player player = event.getPlayer();
 
-        LivingEntity livingEntity = (LivingEntity) protocolManager.getEntityFromID(player.getWorld(), packet.getIntegers().read(ENTITY_ID_INDEX));
-        if(!(livingEntity instanceof Player)) return;
-        Player packetPlayer = (Player) livingEntity;
+        Entity entity = protocolManager.getEntityFromID(player.getWorld(), packet.getIntegers().read(ENTITY_ID_INDEX));
+        if(!(entity instanceof Player)) return;
+        Player packetPlayer = (Player) entity;
 
         if(hiddenArmorManager.isArmorVisible(packetPlayer)) return;
 
@@ -69,7 +73,7 @@ public class EntityEquipmentPacketListener extends PacketAdapter implements Conf
             else if (!shouldIgnore(pair.getSecond()))
                 pair.setSecond(new ItemStack(Material.AIR));
         }
-        packet.getSlotStackPairLists().write(0, pairList);
+        packet.getSlotStackPairLists().write(SLOT_ITEM_PAIR_LIST_INDEX, pairList);
     }
 
     private boolean shouldIgnore(ItemStack itemStack) {

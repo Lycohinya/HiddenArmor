@@ -7,7 +7,6 @@ import me.kteq.hiddenarmor.util.StrUtil;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -16,6 +15,7 @@ import org.bukkit.plugin.Plugin;
 import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -26,6 +26,7 @@ public class MessageHandler implements ConfigHolder {
     private String defaultLocale;
     private String prefix = "";
     private Map<String, FileConfiguration> localeMap;
+    private FileConfiguration defaultResourceLocale;
 
     public MessageHandler(HiddenArmor plugin, String prefix) {
         this.plugin = plugin;
@@ -95,7 +96,8 @@ public class MessageHandler implements ConfigHolder {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             player.spigot().sendMessage(messageType, new TextComponent(StrUtil.color(message)));
-        } else if (sender instanceof ConsoleCommandSender && messageType.equals(ChatMessageType.CHAT)) {
+        } else if (messageType.equals(ChatMessageType.CHAT)) {
+            // Console, RCON and command blocks. Action bars have nowhere to go here.
             sender.sendMessage(StrUtil.color(message));
         }
     }
@@ -132,10 +134,15 @@ public class MessageHandler implements ConfigHolder {
         return localeYaml.getString(messageKey, getDefaultResourceLocale().getString(messageKey));
     }
 
+    /// The bundled fallback locale. Read once: it lives in the jar and cannot change at runtime,
+    /// but getLocalizedMessage() consults it for every placeholder of every message.
     private FileConfiguration getDefaultResourceLocale() {
-        InputStream inputStream = plugin.getResource("locale/en_us.yml");
-        InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
-        return YamlConfiguration.loadConfiguration(inputStreamReader);
+        if (defaultResourceLocale == null) {
+            InputStream inputStream = plugin.getResource("locale/en_us.yml");
+            InputStreamReader inputStreamReader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
+            defaultResourceLocale = YamlConfiguration.loadConfiguration(inputStreamReader);
+        }
+        return defaultResourceLocale;
     }
 
     @Override

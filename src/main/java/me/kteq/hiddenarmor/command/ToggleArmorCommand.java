@@ -9,7 +9,6 @@ import me.kteq.hiddenarmor.util.ConfigHolder;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 
@@ -45,7 +44,8 @@ public class ToggleArmorCommand extends AbstractCommand implements ConfigHolder 
                 return CommandStatus.SUCCESS;
             }
         } else {
-            if (sender instanceof ConsoleCommandSender) {
+            // Not just the console: RCON and command blocks are non-player senders too.
+            if (!(sender instanceof Player)) {
                 messageHandler.message(sender, "%console-togglearmor-warning%");
                 sendUsage(sender);
                 return CommandStatus.SUCCESS;

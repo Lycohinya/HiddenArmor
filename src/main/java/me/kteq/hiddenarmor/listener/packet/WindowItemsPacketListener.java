@@ -38,7 +38,9 @@ public class WindowItemsPacketListener extends PacketAdapter {
         PacketContainer packet = event.getPacket();
         if (!packet.getIntegers().read(WINDOW_ID_INDEX).equals(0)) return;
 
-
+        // No write() back: the packet behind WINDOW_ITEMS is a record, whose final `items` field
+        // ProtocolLib cannot set. It works anyway because the ItemStacks read out are CraftItemStack
+        // mirrors of the packet's own NMS stacks, and buildItemPlaceholder rewrites them in place.
         List<ItemStack> items = packet.getItemListModifier().read(ITEM_LIST_INDEX);
         for (int i = 5; i < 9; i++) {
             ItemStack itemStack = items.get(i);
