@@ -8,7 +8,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityToggleGlideEvent;
-import org.bukkit.scheduler.BukkitRunnable;
 
 public class EntityToggleGlideListener implements Listener {
     HiddenArmor plugin;
@@ -30,11 +29,9 @@ public class EntityToggleGlideListener implements Listener {
         Player player = (Player) e.getEntity();
         if(playerManager.isArmorVisible(player)) return;
 
-        new BukkitRunnable(){
-            @Override
-            public void run() {
-                armorUpdater.updatePlayer(player);
-            }
-        }.runTaskLater(plugin, 1L);
+        // Folia: this only touches this one player (their inventory + the packets sent about them),
+        // so it belongs on that player's EntityScheduler, which follows them across regions.
+        // retired == null: if they log out during the 1-tick delay there is nothing to update.
+        player.getScheduler().runDelayed(plugin, task -> armorUpdater.updatePlayer(player), null, 1L);
     }
 }

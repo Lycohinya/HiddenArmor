@@ -13,6 +13,7 @@ import org.bukkit.entity.Player;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
@@ -28,7 +29,11 @@ public class PlayerManager implements ConfigHolder {
 
     private boolean invisibleAlwaysHideGear;
 
-    private Set<UUID> enabledPlayersUUID = new HashSet<>();
+    /// Folia: read on **every** equipment/inventory packet from many region threads in parallel
+    /// (see the packet listeners), written from commands and gamemode changes. A plain HashSet
+    /// resizing under a concurrent read can spin or return garbage, so this has to be concurrent.
+    /// Identical behaviour single-threaded, so `main` (Paper) semantics are unchanged.
+    private Set<UUID> enabledPlayersUUID = ConcurrentHashMap.newKeySet();
 
 
     public PlayerManager(HiddenArmor plugin) {
@@ -112,7 +117,9 @@ public class PlayerManager implements ConfigHolder {
 
     private void loadEnabledPlayers() {
         loadEnabledPlayersConfig();
-        this.enabledPlayersUUID = enabledPlayersConfig.getStringList("enabled-players").stream().map(UUID::fromString).collect(Collectors.toSet());
+        Set<UUID> loaded = ConcurrentHashMap.newKeySet();
+        enabledPlayersConfig.getStringList("enabled-players").stream().map(UUID::fromString).forEach(loaded::add);
+        this.enabledPlayersUUID = loaded;
     }
 
     private void loadEnabledPlayersConfig() {

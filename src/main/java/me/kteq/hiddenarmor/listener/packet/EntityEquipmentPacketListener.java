@@ -15,6 +15,7 @@ import me.kteq.hiddenarmor.util.protocol.PacketIndexMapper;
 import me.kteq.hiddenarmor.manager.PlayerManager;
 import me.kteq.hiddenarmor.util.ItemUtil;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Entity;
@@ -24,8 +25,11 @@ import org.bukkit.inventory.ItemStack;
 import java.util.List;
 
 public class EntityEquipmentPacketListener extends PacketAdapter implements ConfigHolder {
+    private final HiddenArmor plugin;
     private final PlayerManager hiddenArmorManager;
     private final ProtocolManager protocolManager;
+
+    private volatile boolean unownedWarned = false;
 
     private boolean ignoreLeatherArmor;
     private boolean ignoreTurtleHelmet;
@@ -38,6 +42,7 @@ public class EntityEquipmentPacketListener extends PacketAdapter implements Conf
         super(plugin, PacketType.Play.Server.ENTITY_EQUIPMENT);
         plugin.addConfigHolder(this);
 
+        this.plugin = plugin;
         this.hiddenArmorManager = plugin.getPlayerManager();
         this.protocolManager = plugin.getProtocolManager();
 
@@ -58,6 +63,18 @@ public class EntityEquipmentPacketListener extends PacketAdapter implements Conf
         if(!(entity instanceof Player)) return;
         Player packetPlayer = (Player) entity;
 
+        // Folia: everything below reads live entity state (isInvisible / getGameMode / isGliding).
+        // Bukkit#isOwnedByCurrentRegion(Entity) is documented as "the only appropriate method of
+        // checking for ownership of an entity". Equipment packets about a player are broadcast from
+        // that player's own region tick, so this guard is expected to always pass - if it ever does
+        // not, we want a log line rather than an IllegalStateException thrown mid-packet-send.
+        // Bailing out leaves the packet untouched, i.e. vanilla behaviour (armor shown), never
+        // corrupt data.
+        if(!Bukkit.isOwnedByCurrentRegion(packetPlayer)) {
+            warnUnowned(packetPlayer);
+            return;
+        }
+
         if(hiddenArmorManager.isArmorVisible(packetPlayer)) return;
 
         List<Pair<EnumWrappers.ItemSlot, ItemStack>> pairList = packet.getSlotStackPairLists().read(SLOT_ITEM_PAIR_LIST_INDEX);
@@ -74,6 +91,16 @@ public class EntityEquipmentPacketListener extends PacketAdapter implements Conf
                 pair.setSecond(new ItemStack(Material.AIR));
         }
         packet.getSlotStackPairLists().write(SLOT_ITEM_PAIR_LIST_INDEX, pairList);
+    }
+
+    /// Once per plugin lifetime - this fires on the packet path, a repeating log would be worse
+    /// than the thing it reports.
+    private void warnUnowned(Player packetPlayer) {
+        if (unownedWarned) return;
+        unownedWarned = true;
+        plugin.getLogger().warning("[Folia] Equipment packet for " + packetPlayer.getName()
+                + " arrived on a thread that does not own that player; armor hiding was skipped for it. "
+                + "This was believed impossible - please report it.");
     }
 
     private boolean shouldIgnore(ItemStack itemStack) {

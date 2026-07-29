@@ -9,7 +9,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityPotionEffectEvent;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scheduler.BukkitRunnable;
 
 public class PotionEffectListener implements Listener {
     HiddenArmor plugin;
@@ -32,11 +31,7 @@ public class PotionEffectListener implements Listener {
         if (!PotionEffectType.INVISIBILITY.equals(event.getModifiedType())) return;
         Player player = (Player) event.getEntity();
 
-        new BukkitRunnable(){
-            @Override
-            public void run() {
-                armorUpdater.updatePlayer(player);
-            }
-        }.runTaskLater(plugin, 2L);
+        // Folia: only touches this one player -> their own EntityScheduler.
+        player.getScheduler().runDelayed(plugin, task -> armorUpdater.updatePlayer(player), null, 2L);
     }
 }

@@ -101,7 +101,10 @@ public class Metrics {
                         enabled,
                         this::appendPlatformData,
                         this::appendServiceData,
-                        submitDataTask -> Bukkit.getScheduler().runTask(plugin, submitDataTask),
+                        // Folia: bStats only reads server-global counters (player count, version,
+                        // plugin list), never per-region state, so the global region is the correct
+                        // home for it. The plain Bukkit scheduler throws under region threading.
+                        submitDataTask -> Bukkit.getGlobalRegionScheduler().run(plugin, task -> submitDataTask.run()),
                         plugin::isEnabled,
                         (message, error) -> this.plugin.getLogger().log(Level.WARNING, message, error),
                         (message) -> this.plugin.getLogger().log(Level.INFO, message),

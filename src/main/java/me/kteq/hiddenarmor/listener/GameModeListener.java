@@ -7,7 +7,6 @@ import org.bukkit.GameMode;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.*;
-import org.bukkit.scheduler.BukkitRunnable;
 
 public class GameModeListener implements Listener {
     HiddenArmor plugin;
@@ -28,16 +27,14 @@ public class GameModeListener implements Listener {
             plugin.getArmorUpdater().updatePlayer(event.getPlayer());
         }
 
-        new BukkitRunnable(){
-            @Override
-            public void run() {
-                if (event.getNewGameMode().equals(GameMode.CREATIVE)) {
-                    hiddenArmorManager.enablePlayer(event.getPlayer(), false);
-                } else {
-                    plugin.getArmorUpdater().updatePlayer(event.getPlayer());
-                }
+        // Folia: only touches this one player -> their own EntityScheduler.
+        event.getPlayer().getScheduler().runDelayed(plugin, task -> {
+            if (event.getNewGameMode().equals(GameMode.CREATIVE)) {
+                hiddenArmorManager.enablePlayer(event.getPlayer(), false);
+            } else {
+                plugin.getArmorUpdater().updatePlayer(event.getPlayer());
             }
-        }.runTaskLater(plugin, 1L);
+        }, null, 1L);
     }
 
 

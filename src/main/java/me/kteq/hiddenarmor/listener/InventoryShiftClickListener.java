@@ -12,7 +12,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.scheduler.BukkitRunnable;
 
 public class InventoryShiftClickListener implements Listener {
     private final HiddenArmor plugin;
@@ -43,12 +42,8 @@ public class InventoryShiftClickListener implements Listener {
                 ((armor.getType().toString().endsWith("_CHESTPLATE") || armor.getType().equals(Material.ELYTRA)) && ItemUtil.isEmpty(inv.getChestplate())) ||
                 (armor.getType().toString().endsWith("_LEGGINGS") && ItemUtil.isEmpty(inv.getLeggings())) ||
                 (armor.getType().toString().endsWith("_BOOTS") && ItemUtil.isEmpty(inv.getBoots()))) {
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    armorUpdater.updateSelf(player);
-                }
-            }.runTaskLater(plugin, 1L);
+            // Folia: only touches this one player's own inventory view -> their own EntityScheduler.
+            player.getScheduler().runDelayed(plugin, task -> armorUpdater.updateSelf(player), null, 1L);
         }
     }
 }

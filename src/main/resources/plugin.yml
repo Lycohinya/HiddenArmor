@@ -5,6 +5,12 @@ api-version: '26.2'
 authors: [ Kteq ]
 description: Let players hide their armor and show off their skins
 depend: [ProtocolLib]
+
+# folia/26.2 branch only (project-docs/DECISIONS.md DEC-42 + DEC-45). Must NOT be on master -
+# master is the Paper production baseline.
+# NOTE: ProtocolLib itself only declares partial Folia support upstream, so this plugin can never
+# be safer than ProtocolLib is. See DEC-45 for the scope of what was actually verified.
+folia-supported: true
 commands:
   hiddenarmor:
     description: "Main Hidden Armor command."
