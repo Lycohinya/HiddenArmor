@@ -17,7 +17,9 @@ import me.kteq.hiddenarmor.listener.GameModeListener;
 import me.kteq.hiddenarmor.listener.PotionEffectListener;
 import me.kteq.hiddenarmor.listener.InventoryShiftClickListener;
 import me.kteq.hiddenarmor.listener.packet.EntityEquipmentPacketListener;
+import me.kteq.hiddenarmor.listener.packet.EntityMetadataPacketListener;
 import me.kteq.hiddenarmor.listener.packet.SetSlotPacketListener;
+import me.kteq.hiddenarmor.manager.PacketStateCache;
 import me.kteq.hiddenarmor.manager.PlayerManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -27,6 +29,7 @@ import java.util.logging.Level;
 
 public final class HiddenArmor extends JavaPlugin {
     private PlayerManager playerManager;
+    private PacketStateCache packetStateCache;
     private ArmorUpdateHandler armorUpdater;
     private ArmorPlaceholderHandler armorPlaceholderHandler;
     private MessageHandler messageHandler;
@@ -47,6 +50,7 @@ public final class HiddenArmor extends JavaPlugin {
         this.protocolManager = ProtocolLibrary.getProtocolManager();
         this.messageHandler = new MessageHandler(this, "&c[&fHiddenArmor&c] &f");
         this.armorUpdater = new ArmorUpdateHandler(this, packetIndexMapper);
+        this.packetStateCache = new PacketStateCache(this);
         this.playerManager = new PlayerManager(this);
         this.armorPlaceholderHandler = new ArmorPlaceholderHandler(this);
 
@@ -63,6 +67,7 @@ public final class HiddenArmor extends JavaPlugin {
         protocolManager.addPacketListener(new SetSlotPacketListener(this, packetIndexMapper));
         protocolManager.addPacketListener(new WindowItemsPacketListener(this, packetIndexMapper));
         protocolManager.addPacketListener(new EntityEquipmentPacketListener(this, packetIndexMapper));
+        protocolManager.addPacketListener(new EntityMetadataPacketListener(this, packetIndexMapper));
 
         // Register event listeners
         new InventoryShiftClickListener(this);
@@ -105,6 +110,10 @@ public final class HiddenArmor extends JavaPlugin {
 
     public PlayerManager getPlayerManager() {
         return playerManager;
+    }
+
+    public PacketStateCache getPacketStateCache() {
+        return packetStateCache;
     }
 
     public ArmorUpdateHandler getArmorUpdater() {

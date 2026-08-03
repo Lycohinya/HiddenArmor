@@ -27,6 +27,9 @@ public class PacketIndexMapper {
 
         indexMapping.put(PacketFields.ENTITY_EQUIPMENT_$ENTITY_ID, 0);
         indexMapping.put(PacketFields.ENTITY_EQUIPMENT_$SLOT_ITEM_PAIR_LIST, 0);
+
+        indexMapping.put(PacketFields.ENTITY_METADATA_$ENTITY_ID, 0);
+        indexMapping.put(PacketFields.ENTITY_METADATA_$DATA_VALUE_LIST, 0);
     }
 
     public static boolean isVersionGreaterOrEqual(String v1, String v2) {

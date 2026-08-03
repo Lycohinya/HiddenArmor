@@ -92,11 +92,33 @@ public class PlayerManager implements ConfigHolder {
         return !enabledPlayersUUID.isEmpty() || invisibleAlwaysHideGear;
     }
 
+    /// Only safe on threads that own the player - reads live entity state. The packet listeners
+    /// must use the UUID overload below instead.
     public boolean isArmorVisible(Player player) {
         boolean hidden = isEnabled(player);
         boolean invisible = player.isInvisible();
 
         if (player.getGameMode().equals(GameMode.CREATIVE) || (invisible && !invisibleAlwaysHideGear))
+            hidden = false;
+        if (invisible && invisibleAlwaysHideGear)
+            hidden = true;
+
+        return !hidden;
+    }
+
+    /// Folia (DEC-64 / D-49 plan B): packet-path variant. Same decision as above, but reads only
+    /// PacketStateCache ("what the clients have been told"), never live entity state, so it is
+    /// safe on any connection thread. Unknown state (never seeded) counts as visible, i.e. the
+    /// packet is left alone - vanilla behaviour, never corrupt data.
+    public boolean isArmorVisible(UUID uuid) {
+        PacketStateCache cache = plugin.getPacketStateCache();
+        GameMode gameMode = cache.gameMode(uuid);
+        if (gameMode == null) return true;
+
+        boolean hidden = enabledPlayersUUID.contains(uuid);
+        boolean invisible = cache.isInvisible(uuid);
+
+        if (gameMode.equals(GameMode.CREATIVE) || (invisible && !invisibleAlwaysHideGear))
             hidden = false;
         if (invisible && invisibleAlwaysHideGear)
             hidden = true;

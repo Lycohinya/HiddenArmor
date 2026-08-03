@@ -37,7 +37,9 @@ public class SetSlotPacketListener extends PacketAdapter {
     @Override
     public void onPacketSending(PacketEvent event) {
         Player player = event.getPlayer();
-        if (playerManager.isArmorVisible(player)) return;
+        // Folia (DEC-64 / D-49 plan B): connection thread - use the cached UUID variant, never
+        // live entity state.
+        if (playerManager.isArmorVisible(player.getUniqueId())) return;
 
         PacketContainer packet = event.getPacket();
         if (!packet.getIntegers().read(WINDOW_ID_INDEX).equals(0)) return;
