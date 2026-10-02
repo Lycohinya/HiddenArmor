@@ -4,12 +4,12 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.wrappers.EnumWrappers;
-import com.comphenix.protocol.wrappers.Pair;
+import com.comphenix.protocol.reflect.StructureModifier;
 
 import me.kteq.hiddenarmor.HiddenArmor;
 import me.kteq.hiddenarmor.manager.PacketStateCache;
 import me.kteq.hiddenarmor.util.ConfigHolder;
+import me.kteq.hiddenarmor.util.protocol.NmsItems;
 import me.kteq.hiddenarmor.util.protocol.PacketFields;
 import me.kteq.hiddenarmor.util.protocol.PacketIndexMapper;
 import me.kteq.hiddenarmor.manager.PlayerManager;
@@ -19,6 +19,7 @@ import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -61,20 +62,29 @@ public class EntityEquipmentPacketListener extends PacketAdapter implements Conf
 
         if (hiddenArmorManager.isArmorVisible(packetPlayer)) return;
 
-        List<Pair<EnumWrappers.ItemSlot, ItemStack>> pairList = packet.getSlotStackPairLists().read(SLOT_ITEM_PAIR_LIST_INDEX);
+        // Raw NMS List<Pair<EquipmentSlot, ItemStack>>, not getSlotStackPairLists(): see NmsItems.
+        StructureModifier<Object> lists = packet.getModifier().withType(List.class);
+        List<?> pairList = (List<?>) lists.read(SLOT_ITEM_PAIR_LIST_INDEX);
+        if (pairList == null) return;
 
-        for (Pair<EnumWrappers.ItemSlot, ItemStack> pair : pairList) {
-            ItemStack item = pair.getSecond();
+        List<Object> rewritten = new ArrayList<>(pairList.size());
+        for (Object pair : pairList) {
+            ItemStack item = NmsItems.toBukkit(NmsItems.pairSecond(pair));
+            ItemStack replacement = null;
             if (item.getType().equals(Material.ELYTRA)
                     && ((stateCache.isGliding(packetPlayer) || ignoreElytra)
                     && !stateCache.isInvisible(packetPlayer)))
             {
-                pair.setSecond(new ItemStack(Material.ELYTRA));
+                replacement = new ItemStack(Material.ELYTRA);
             }
-            else if (!shouldIgnore(pair.getSecond()))
-                pair.setSecond(new ItemStack(Material.AIR));
+            else if (!shouldIgnore(item))
+                replacement = new ItemStack(Material.AIR);
+
+            rewritten.add(replacement == null
+                    ? pair
+                    : NmsItems.pair(NmsItems.pairFirst(pair), NmsItems.toNms(replacement)));
         }
-        packet.getSlotStackPairLists().write(SLOT_ITEM_PAIR_LIST_INDEX, pairList);
+        lists.write(SLOT_ITEM_PAIR_LIST_INDEX, rewritten);
     }
 
     private boolean shouldIgnore(ItemStack itemStack) {

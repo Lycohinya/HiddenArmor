@@ -5,10 +5,12 @@ import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 
+import com.comphenix.protocol.reflect.StructureModifier;
 import me.kteq.hiddenarmor.HiddenArmor;
 import me.kteq.hiddenarmor.handler.ArmorPlaceholderHandler;
 import me.kteq.hiddenarmor.manager.PlayerManager;
 
+import me.kteq.hiddenarmor.util.protocol.NmsItems;
 import me.kteq.hiddenarmor.util.protocol.PacketFields;
 import me.kteq.hiddenarmor.util.protocol.PacketIndexMapper;
 import org.bukkit.entity.Player;
@@ -47,11 +49,12 @@ public class SetSlotPacketListener extends PacketAdapter {
         int slotNumber = packet.getIntegers().read(SLOT_NUMBER_INDEX);
         if (slotNumber < 5 || slotNumber > 8) return;
 
-
-        ItemStack itemStack = packet.getItemModifier().read(ITEM_INDEX);
-        if (itemStack != null) {
-            ItemStack placeholder = placeholderHandler.buildItemPlaceholder(itemStack);
-            packet.getItemModifier().write(ITEM_INDEX, placeholder);
+        // Raw NMS field, not getItemModifier(): see NmsItems.
+        StructureModifier<Object> items = packet.getModifier().withType(NmsItems.itemStackClass());
+        Object nmsItem = items.read(ITEM_INDEX);
+        if (nmsItem != null) {
+            ItemStack placeholder = placeholderHandler.buildItemPlaceholder(NmsItems.toBukkit(nmsItem));
+            items.write(ITEM_INDEX, NmsItems.toNms(placeholder));
         }
     }
 

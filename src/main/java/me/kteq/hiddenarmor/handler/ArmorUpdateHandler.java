@@ -3,9 +3,8 @@ package me.kteq.hiddenarmor.handler;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.wrappers.EnumWrappers;
-import com.comphenix.protocol.wrappers.Pair;
 import me.kteq.hiddenarmor.HiddenArmor;
+import me.kteq.hiddenarmor.util.protocol.NmsItems;
 import me.kteq.hiddenarmor.util.protocol.PacketFields;
 import me.kteq.hiddenarmor.util.protocol.PacketIndexMapper;
 import me.kteq.hiddenarmor.util.protocol.ProtocolUtil;
@@ -13,6 +12,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ArmorUpdateHandler {
@@ -49,7 +49,7 @@ public class ArmorUpdateHandler {
             packetSelf.getIntegers().write(SET_SLOT_$SLOT_NUMBER_INDEX, i);
 
             ItemStack armor = ProtocolUtil.getArmor(ProtocolUtil.ArmorType.getType(i), inv);
-            packetSelf.getItemModifier().write(SET_SLOT_$ITEM_INDEX, armor);
+            packetSelf.getModifier().withType(NmsItems.itemStackClass()).write(SET_SLOT_$ITEM_INDEX, NmsItems.toNms(armor));
 
             protocolManager.sendServerPacket(player, packetSelf);
         }
@@ -60,16 +60,21 @@ public class ArmorUpdateHandler {
         packetOthers.getIntegers().write(ENTITY_EQUIPMENT_$ENTITY_ID_INDEX, player.getEntityId());
 
         PlayerInventory inv = player.getInventory();
-        List<Pair<EnumWrappers.ItemSlot, ItemStack>> pairList = packetOthers.getSlotStackPairLists().read(0);
-        pairList.add(new Pair<>(EnumWrappers.ItemSlot.HEAD, ProtocolUtil.getArmor(ProtocolUtil.ArmorType.HELMET, inv)));
-        pairList.add(new Pair<>(EnumWrappers.ItemSlot.CHEST, ProtocolUtil.getArmor(ProtocolUtil.ArmorType.CHEST, inv)));
-        pairList.add(new Pair<>(EnumWrappers.ItemSlot.LEGS, ProtocolUtil.getArmor(ProtocolUtil.ArmorType.LEGGS, inv)));
-        pairList.add(new Pair<>(EnumWrappers.ItemSlot.FEET, ProtocolUtil.getArmor(ProtocolUtil.ArmorType.BOOTS, inv)));
-        pairList.add(new Pair<>(EnumWrappers.ItemSlot.MAINHAND, player.getInventory().getItemInMainHand().clone()));
-        pairList.add(new Pair<>(EnumWrappers.ItemSlot.OFFHAND, player.getInventory().getItemInOffHand().clone()));
+        // Raw NMS pairs, not getSlotStackPairLists(): see NmsItems.
+        List<Object> pairList = new ArrayList<>(6);
+        pairList.add(slotPair("HEAD", ProtocolUtil.getArmor(ProtocolUtil.ArmorType.HELMET, inv)));
+        pairList.add(slotPair("CHEST", ProtocolUtil.getArmor(ProtocolUtil.ArmorType.CHEST, inv)));
+        pairList.add(slotPair("LEGS", ProtocolUtil.getArmor(ProtocolUtil.ArmorType.LEGGS, inv)));
+        pairList.add(slotPair("FEET", ProtocolUtil.getArmor(ProtocolUtil.ArmorType.BOOTS, inv)));
+        pairList.add(slotPair("MAINHAND", player.getInventory().getItemInMainHand().clone()));
+        pairList.add(slotPair("OFFHAND", player.getInventory().getItemInOffHand().clone()));
 
-        packetOthers.getSlotStackPairLists().write(ENTITY_EQUIPMENT_$SLOT_ITEM_PAIR_LIST_INDEX, pairList);
+        packetOthers.getModifier().withType(List.class).write(ENTITY_EQUIPMENT_$SLOT_ITEM_PAIR_LIST_INDEX, pairList);
 
         ProtocolUtil.broadcastPlayerPacket(protocolManager, packetOthers, player);
+    }
+
+    private static Object slotPair(String slot, ItemStack item) {
+        return NmsItems.pair(NmsItems.equipmentSlot(slot), NmsItems.toNms(item));
     }
 }

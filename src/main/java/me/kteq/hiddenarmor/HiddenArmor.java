@@ -10,6 +10,7 @@ import me.kteq.hiddenarmor.handler.ArmorUpdateHandler;
 import me.kteq.hiddenarmor.handler.MessageHandler;
 import me.kteq.hiddenarmor.listener.packet.WindowItemsPacketListener;
 import me.kteq.hiddenarmor.util.ConfigHolder;
+import me.kteq.hiddenarmor.util.protocol.NmsItems;
 import me.kteq.hiddenarmor.util.protocol.PacketIndexMapper;
 import me.kteq.hiddenarmor.util.Metrics;
 import me.kteq.hiddenarmor.listener.EntityToggleGlideListener;
@@ -43,6 +44,14 @@ public final class HiddenArmor extends JavaPlugin {
         // Default config file
         this.saveDefaultConfig();
         checkConfig();
+
+        try {
+            NmsItems.init(getServer());
+        } catch (ReflectiveOperationException e) {
+            getLogger().log(Level.SEVERE, "Cannot resolve the core's packet item conversion; disabling", e);
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
 
         PacketIndexMapper packetIndexMapper = new PacketIndexMapper(this);
 
@@ -84,7 +93,8 @@ public final class HiddenArmor extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        playerManager.saveCurrentEnabledPlayers();
+        if (playerManager != null)
+            playerManager.saveCurrentEnabledPlayers();
     }
 
     private void checkConfig() {
