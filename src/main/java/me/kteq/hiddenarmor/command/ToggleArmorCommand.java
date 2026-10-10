@@ -33,7 +33,9 @@ public class ToggleArmorCommand extends AbstractCommand implements ConfigHolder 
 
         Player player;
         MessageHandler messageHandler = plugin.getMessageHandler();
-        if (!hasSubPermission(sender, "toggle") && !defaultPermissionToggle) return CommandStatus.NO_PERMISSION;
+        // 特典被收回後,已經隱藏中的玩家仍可自己切回顯示(只放行「關掉」,不放行「開啟」)
+        boolean selfRestore = arguments.length == 0 && sender instanceof Player && hiddenArmorManager.isEnabled((Player) sender);
+        if (!selfRestore && !hasSubPermission(sender, "toggle") && !defaultPermissionToggle) return CommandStatus.NO_PERMISSION;
         if (arguments.length == 1) {
             if(!hasSubPermission(sender, "toggle.other") && !defaultPermissionToggleOther) return CommandStatus.NO_PERMISSION;
             String playerName = arguments[0];

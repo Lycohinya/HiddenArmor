@@ -83,6 +83,7 @@ public final class HiddenArmor extends JavaPlugin {
         new GameModeListener(this);
         new PotionEffectListener(this);
         new EntityToggleGlideListener(this);
+        new me.kteq.hiddenarmor.listener.PermissionGuardListener(this);
 
         //getCommand("hiddenarmor").setTabCompleter(new HiddenArmorTabCompleter(this));
         reloadConfig();
